@@ -1,0 +1,23 @@
+{
+  "name": "ksu-tailscale-webui",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "^22.18.0 || >=24.0.0" },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@material/web": "2.5.0",
+    "kernelsu-alt": "3.1.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "typescript": "6.0.2",
+    "vite": "8.2.2"
+  }
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>WebUI checks running</title></head>
+<body>
+<div id="root"></div>
+<output id="result" role="status"></output>
+<script type="module">
+let status = { BackendState: 'DaemonStopped' }
+let delay = 0
+let failLog = false
+let connects = 0
+let signIns = 0
+window.ksu = { exec(command, options, callback) {
+  const respond = () => {
+    if (command.endsWith(' status')) window[callback](0, JSON.stringify(status), '')
+    else if (command.endsWith(' connect')) {
+      connects++
+      status = { BackendState: 'NeedsLogin', AuthURL: 'https://login.tailscale.com/a/test' }
+      window[callback](0, '', '')
+    } else if (command.startsWith('am start ')) {
+      signIns++
+      window[callback](0, '', '')
+    } else if (command.endsWith(' log')) window[callback](failLog ? 1 : 0, failLog ? '' : 'daemon ready', failLog ? 'Log temporarily unavailable' : '')
+    else window[callback](1, '', 'Unexpected command')
+  }
+  if (command.endsWith(' status') && delay) setTimeout(respond, delay)
+  else respond()
+} }
+const assert = (value, message) => { if (!value) throw new Error(message) }
+async function wait(check, message) {
+  const deadline = performance.now() + 8000
+  while (!check()) {
+    assert(performance.now() < deadline, message)
+    await new Promise(resolve => setTimeout(resolve, 20))
+  }
+}
+function click(label) {
+  const button = [...document.querySelectorAll('button, md-filled-button, md-text-button')].find(node => node.textContent.trim() === label)
+  assert(button && !button.disabled, `Missing enabled button: ${label}`)
+  button.click()
+}
+try {
+  await import('../src/main.tsx')
+  await wait(() => document.querySelector('.status')?.textContent === 'Disconnected', 'Initial status did not load')
+  delay = 200
+  document.dispatchEvent(new Event('visibilitychange'))
+  click('Connect')
+  click('Connect')
+  delay = 0
+  await wait(() => signIns === 1, 'Connect was lost during polling, or sign-in did not open')
+  assert(connects === 1, 'A double tap executed Connect twice')
+  status = { BackendState: 'Running', Peer: { a: { HostName: 'desktop', OS: 'linux', Online: true, TailscaleIPs: ['100.64.0.8'] }, b: { HostName: 'laptop', OS: 'windows', Online: false, TailscaleIPs: ['100.64.0.9'] } } }
+  document.dispatchEvent(new Event('visibilitychange'))
+  await wait(() => document.querySelector('.status')?.textContent === 'Connected', 'Sign-in status did not update automatically')
+  click('Devices')
+  await wait(() => document.querySelector('input[type=search]'), 'Device search is missing')
+  const input = document.querySelector('input[type=search]')
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'WINDOWS')
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+  await wait(() => document.querySelectorAll('.peer strong').length === 1, 'Device search did not filter')
+  assert(document.querySelector('.peer strong').textContent === 'laptop', 'Device search selected the wrong peer')
+  click('Log')
+  await wait(() => document.querySelector('pre')?.textContent === 'daemon ready', 'Log did not load')
+  failLog = true
+  document.dispatchEvent(new Event('visibilitychange'))
+  await wait(() => document.querySelector('[role=alert]')?.textContent.includes('Log temporarily unavailable'), 'Log failure was hidden')
+  failLog = false
+  document.dispatchEvent(new Event('visibilitychange'))
+  await wait(() => !document.querySelector('[role=alert]'), 'Recovered log left a stale failure banner')
+  document.title = 'WebUI checks passed'
+  document.querySelector('#result').textContent = 'WebUI checks passed: polling, single Connect, sign-in, search, log recovery.'
+} catch (error) {
+  document.title = 'WebUI checks failed'
+  document.querySelector('#result').textContent = `WebUI checks failed: ${error.message}`
+  console.error(error)
+}
+</script>
+</body>
+</html>

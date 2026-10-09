@@ -1,0 +1,6 @@
+id=ksu-tailscale
+name=KSU Tailscale
+version=v1.0.0
+versionCode=1
+author=chisewaguri
+description=Tailscale for KernelSU and APatch without system mounts. Open the WebUI to connect.

@@ -1,0 +1,8 @@
+build/
+*.zip
+module/webroot/
+webui/node_modules/
+TASKS.md
+.claude/
+AGENTS.md
+CLAUDE.md

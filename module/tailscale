@@ -1,0 +1,3 @@
+#!/system/bin/sh
+export TS_BE_CLI=1
+exec /data/adb/tailscale/bin/tailscaled --socket=/data/adb/tailscale/tailscaled.sock "$@"
